@@ -18,6 +18,11 @@ debug/*.*
 image/*.*
 include/fl/*.*
 imagelib/*.*
+imagelib/debug/*.*
+imagelib/release/*.*
+*.opensdf
+*.sdf
+*.ipch
 
 *.sln
 *.old
