@@ -30,5 +30,6 @@ imagelib/release/*.*
 *.vcxproj
 *.vcxproj.*
 *.user
+*.suo
 makefile
 .ds_store
