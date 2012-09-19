@@ -17,4 +17,13 @@ release/*.*
 debug/*.*
 image/*.*
 include/fl/*.*
-imgalib/*.*
+imagelib/*.*
+
+*.sln
+*.old
+*.vcproj
+*.vcxproj
+*.vcxproj.*
+*.user
+makefile
+.ds_store
