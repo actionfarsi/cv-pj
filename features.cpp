@@ -281,14 +281,49 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
     int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
 
-    for (int y = 0; y < h; y++) {
+	CFloatImage kx(harrisImage.Shape());
+	CFloatImage ky(harrisImage.Shape());
+
+	/* Calculate derivatives */
+	Convolve(srcImage,kx,ConvolveKernel_SobelX);
+	Convolve(srcImage,ky,ConvolveKernel_SobelY);
+
+	/* Calculate the 3 elements */
+	CFloatImage h_a(harrisImage.Shape());
+	CFloatImage h_b(harrisImage.Shape());
+	CFloatImage h_c(harrisImage.Shape());
+	
+	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-            
+			h_a.Pixel(x,y,1) = kx.Pixel(x,y,1) * kx.Pixel(x,y,1);
+			h_b.Pixel(x,y,1) = kx.Pixel(x,y,1) * ky.Pixel(x,y,1);
+			h_c.Pixel(x,y,1) = ky.Pixel(x,y,1) * ky.Pixel(x,y,1);
+		}
+	}
+
+	/* Calculate elements Harris matrix.
+	Average sum is equivalent to filtering */
+	CShape sh(5, 5, 1);
+	CFloatImage averageK(sh);
+	for (int i = 0; i < 25; i++)
+		averageK.Pixel(i % 5, i- i%5, 1) = gaussian5x5[i];
+
+	Convolve(CFloatImage(h_a),h_a, averageK);
+	Convolve(CFloatImage(h_b),h_b, averageK);
+	Convolve(CFloatImage(h_c),h_c, averageK);
+
+    
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {            
             // TODO:  Compute the harris score for 'srcImage' at this pixel and store in 'harrisImage'.  See the project
             //   page for pointers on how to do this
+			harrisImage.Pixel(x,y,1) = (h_a.Pixel(x,y,1) * h_c.Pixel(x,y,1) - h_b.Pixel(x,y,1)*h_b.Pixel(x,y,1) ) /
+											(h_a.Pixel(x,y,1) + h_c.Pixel(x,y,1));
             
         }
     }
+
+	// De-allocate memory!!!
 }
 
 
