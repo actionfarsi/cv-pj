@@ -32,6 +32,7 @@ bool computeFeatures(CFloatImage &image, FeatureSet &features, int featureType, 
     switch (descriptorType) {
     case 1:
         ComputeSimpleDescriptors(image, features);
+		//line
         break;
     case 2:
         ComputeMOPSDescriptors(image, features);
