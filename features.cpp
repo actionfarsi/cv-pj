@@ -253,16 +253,24 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
     //Loop through feature points in harrisMaxImage and fill in information needed for 
     //descriptor computation for each point above a threshold. We fill in id, type, 
     //x, y, and angle.
+	int id = 1;
+
     for (int y=0;y<harrisMaxImage.Shape().height;y++) {
         for (int x=0;x<harrisMaxImage.Shape().width;x++) {
                 
             // Skip over non-maxima
             if (harrisMaxImage.Pixel(x, y, 0) == 0)
-		continue;
+				continue;
 
             //TO DO---------------------------------------------------------------------
             // Fill in feature with descriptor data here. 
             Feature f;
+
+			f.x = x;
+			f.y = y;
+			f.angleRadians = 0;
+			f.id = id;
+			id++;
 
             // Add the feature to the list of features
             features.push_back(f);
@@ -323,7 +331,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
         }
     }
 
-	// De-allocate memory!!!
+	// De-allocate memory????
 }
 
 
@@ -335,7 +343,37 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 //    You'll need to find a good threshold to use.
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
-        
+	// Choose threshold
+	float threshold = 50000;
+
+	int w = srcImage.Shape().width;
+    int h = srcImage.Shape().height;
+
+	// Threshold loop
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+			if (srcImage.Pixel(x,y,1) >= threshold){
+				destImage.Pixel(x,y,1) = 1;
+			} else {
+				destImage.Pixel(x,y,1) = 0;
+			}
+		}
+	}
+
+	// find local maxima
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+			if (destImage.Pixel(x,y,1) == 1){
+				float temp = srcImage.Pixel(x,y,1);
+				for (int j = max(0,y-1); j < min(h,y+1); j++)
+					for (int i = max(0,x-1); i < min(w,x+1); i++)
+						if (srcImage.Pixel(x+i,y+j,1) < temp)
+							destImage.Pixel(x,y,1) = 0;
+			}
+			
+            
+        }
+    }
 }
 
 
@@ -351,6 +389,17 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 
         //TO DO---------------------------------------------------------------------
         // The descriptor is a 5x5 window of intensities sampled centered on the feature point.
+		int w = image.Shape().width;
+		int h = image.Shape().height;
+
+		for (int j = 0; j < 5; j++)
+			for (int k = 0; k < 5; k++)
+				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
+						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,1));
+					else{
+						//If out of bundary put 0
+						f.data.push_back(grayImage.Pixel(f.x+k,f.y+j,1));
+					}
 
         i++;
     }
