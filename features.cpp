@@ -344,7 +344,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 50000;
+	float threshold = 500;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
@@ -363,10 +363,13 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 	// find local maxima
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
+			/* if the pixel x,y is above threshold, remove pixels around it */
 			if (destImage.Pixel(x,y,1) == 1){
 				float temp = srcImage.Pixel(x,y,1);
+				/* loop between a 3x3 window */
 				for (int j = max(0,y-1); j < min(h,y+1); j++)
 					for (int i = max(0,x-1); i < min(w,x+1); i++)
+						/* If the value of the pixel is less then the x,y pixel, set it to zero */
 						if (srcImage.Pixel(x+i,y+j,1) < temp)
 							destImage.Pixel(x,y,1) = 0;
 			}
@@ -387,20 +390,37 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
     while (i != features.end()) {
         Feature &f = *i;
 
-        //TO DO---------------------------------------------------------------------
-        // The descriptor is a 5x5 window of intensities sampled centered on the feature point.
 		int w = image.Shape().width;
 		int h = image.Shape().height;
 
-		for (int j = 0; j < 5; j++)
-			for (int k = 0; k < 5; k++)
+		//TO DO---------------------------------------------------------------------
+        // For each position calculate eigenvectors of H matrix to extact direction
+		//TODO
+		
+		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
+		//TODO
+
+		// extract 41x41 pixels around feature.
+		//TODO
+		for (int j = 0; j < 5; j++){
+			for (int k = 0; k < 5; k++){
+				/* Check if in the boundaries of the image */
 				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
 						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,1));
-					else{
-						//If out of bundary put 0
-						f.data.push_back(grayImage.Pixel(f.x+k,f.y+j,1));
+				} else {
+						/* If out of bundary put 0 */
+						f.data.push_back(0);
 					}
+				}
+			}
+		// Rotate it
+		//TODO
 
+		// subsample to a 5x5 patch
+		//TODO
+
+		// Add it to the feature.data
+		//TODO
         i++;
     }
 }
@@ -408,7 +428,32 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 // Compute MOPs descriptors.
 void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 {
+	//Create grayscale image used for Harris detection
+    CFloatImage grayImage=ConvertToGray(image);
 
+    vector<Feature>::iterator i = features.begin();
+    while (i != features.end()) {
+        Feature &f = *i;
+
+        //TO DO---------------------------------------------------------------------
+        // The descriptor is a 5x5 window of intensities sampled centered on the feature point.
+		int w = image.Shape().width;
+		int h = image.Shape().height;
+
+		// Loop around the 5x5 pixels
+		for (int j = 0; j < 5; j++){
+			for (int k = 0; k < 5; k++){
+				/* Check if in the boundaries of the image */
+				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
+						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,1));
+				} else {
+						/* If out of bundary put 0 */
+						f.data.push_back(0);
+					}
+				}
+			}
+        i++;
+    }
 }
 
 // Compute Custom descriptors (extra credit)
