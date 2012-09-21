@@ -82,13 +82,15 @@ bool matchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMat
     // TODO: We have given you the ssd matching function, you must write your own
     // feature matching function for the ratio test.
         
-    printf("\nMatching features.......\n");
+    printf("\nMatching features now.......\n");
 
     switch (matchType) {
     case 1:
+        printf("\nssd\n");
         ssdMatchFeatures(f1, f2, matches, totalScore);
         return true;
     case 2:
+		printf("\nration");
         ratioMatchFeatures(f1, f2, matches, totalScore);
         return true;
     default:
@@ -366,6 +368,7 @@ void ssdMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Feature
         matches[i].score = -dBest;
         totalScore += matches[i].score;
     }
+     
 }
 
 // TODO: Write this function to perform ratio feature matching.  
@@ -375,8 +378,54 @@ void ssdMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Feature
 // the second image.  (See class notes for more information, and the sshMatchFeatures function above as a reference)
 void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMatch> &matches, double &totalScore) 
 {
-        
-    //test2
+
+    int m = f1.size();
+    int n = f2.size();
+
+    matches.resize(m);
+    totalScore = 0;
+
+    double d;
+    double dBest;
+    int idBest;
+    for (int i=0; i<m; i++) {
+    	matches[i].id1=0;
+    	matches[i].id2=0;
+    	matches[i].second=0;
+    	matches[i].score=0;
+    }
+    for (int i=0; i<m; i++) {
+        dBest = 1e100;
+        idBest = 0;
+        double second_best=0;
+        for (int j=0; j<n; j++) {
+            d = distanceSSD(f1[i].data, f2[j].data);
+
+            if (d < dBest) {
+            	//makes the last best value the 2nd best
+            	second_best=dBest;
+            	dBest = d;
+            	idBest = f2[j].id;
+
+            }
+        }
+
+        matches[i].id1 = f1[i].id;
+        matches[i].id2 = idBest;
+        //moves past best score into 2nd place
+
+		matches[i].second=second_best;
+        matches[i].score = -dBest;
+       //totalScore += matches[i].score;
+
+    }
+
+    for (int i=0; i<m; i++) {
+    totalScore += matches[i].score/matches[i].second;
+    printf("score:%f\n",matches[i].score);
+    printf("secod:%f",matches[i].second);
+    }
+
 }
 
 
