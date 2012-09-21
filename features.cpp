@@ -368,7 +368,8 @@ void ssdMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Feature
         matches[i].score = -dBest;
         totalScore += matches[i].score;
     }
-     
+    printf("score:%f\n",totalScore);
+
 }
 
 // TODO: Write this function to perform ratio feature matching.  
@@ -414,7 +415,7 @@ void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Featu
         matches[i].id2 = idBest;
         //moves past best score into 2nd place
 
-		matches[i].second=second_best;
+		matches[i].second=-second_best;
         matches[i].score = -dBest;
        //totalScore += matches[i].score;
 
@@ -422,8 +423,8 @@ void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Featu
 
     for (int i=0; i<m; i++) {
     totalScore += matches[i].score/matches[i].second;
-    printf("score:%f\n",matches[i].score);
-    printf("secod:%f",matches[i].second);
+    printf("score:%f\n",totalScore);
+
     }
 
 }
