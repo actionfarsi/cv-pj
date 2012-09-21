@@ -234,19 +234,21 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
 
     //Create image to store Harris values
     CFloatImage harrisImage(image.Shape().width,image.Shape().height,1);
-
+	
     //Create image to store local maximum harris values as 1, other pixels 0
     CByteImage harrisMaxImage(image.Shape().width,image.Shape().height,1);
+
+	CByteImage tmp(harrisImage.Shape());
 
     //compute Harris values puts harris values at each pixel position in harrisImage. 
     //You'll need to implement this function.
     computeHarrisValues(grayImage, harrisImage);
-        
+
     // Threshold the harris image and compute local maxima.  You'll need to implement this function.
     computeLocalMaxima(harrisImage,harrisMaxImage);
 
     // Prints out the harris image for debugging purposes
-    CByteImage tmp(harrisImage.Shape());
+   
     convertToByteImage(harrisImage, tmp);
     WriteFile(tmp, "harris.tga");
     
@@ -305,9 +307,9 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 	
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-			h_a.Pixel(x,y,1) = kx.Pixel(x,y,1) * kx.Pixel(x,y,1);
-			h_b.Pixel(x,y,1) = kx.Pixel(x,y,1) * ky.Pixel(x,y,1);
-			h_c.Pixel(x,y,1) = ky.Pixel(x,y,1) * ky.Pixel(x,y,1);
+			h_a.Pixel(x,y,0) = kx.Pixel(x,y,0) * kx.Pixel(x,y,0);
+			h_b.Pixel(x,y,0) = kx.Pixel(x,y,0) * ky.Pixel(x,y,0);
+			h_c.Pixel(x,y,0) = ky.Pixel(x,y,0) * ky.Pixel(x,y,0);
 		}
 	}
 
@@ -316,18 +318,18 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 	CShape sh(5, 5, 1);
 	CFloatImage averageK(sh);
 	for (int i = 0; i < 25; i++)
-		averageK.Pixel(i % 5, i- i%5, 1) = gaussian5x5[i];
+		averageK.Pixel((i-i%5)/5, i%5, 0) = gaussian5x5[i];
 
-	Convolve(CFloatImage(h_a),h_a, averageK);
-	Convolve(CFloatImage(h_b),h_b, averageK);
-	Convolve(CFloatImage(h_c),h_c, averageK);
+	Convolve(h_a,h_a, averageK);
+	Convolve(h_b,h_b, averageK);
+	Convolve(h_c,h_c, averageK);
     
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {            
             // TODO:  Compute the harris score for 'srcImage' at this pixel and store in 'harrisImage'.  See the project
             //   page for pointers on how to do this
-			harrisImage.Pixel(x,y,1) = (h_a.Pixel(x,y,1) * h_c.Pixel(x,y,1) - h_b.Pixel(x,y,1)*h_b.Pixel(x,y,1) ) /
-											(h_a.Pixel(x,y,1) + h_c.Pixel(x,y,1));
+			harrisImage.Pixel(x,y,0) = (h_a.Pixel(x,y,0) * h_c.Pixel(x,y,0) - h_b.Pixel(x,y,0)*h_b.Pixel(x,y,0) ) /
+											(h_a.Pixel(x,y,0) + h_c.Pixel(x,y,0));
             
         }
     }
@@ -345,7 +347,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 500;
+	float threshold = 0.6;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
@@ -353,29 +355,31 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 	// Threshold loop
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-			if (srcImage.Pixel(x,y,1) >= threshold){
-				destImage.Pixel(x,y,1) = 1;
+			if (srcImage.Pixel(x,y,0) >= threshold){
+				destImage.Pixel(x,y,0) = 1;
 			} else {
-				destImage.Pixel(x,y,1) = 0;
+				destImage.Pixel(x,y,0) = 0;
 			}
 		}
 	}
-
+	
 	// find local maxima
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
 			/* if the pixel x,y is above threshold, remove pixels around it */
-			if (destImage.Pixel(x,y,1) == 1){
-				float temp = srcImage.Pixel(x,y,1);
+			if (destImage.Pixel(x,y,0) != 0) {
+				float temp = srcImage.Pixel(x,y,0);
 				/* loop between a 3x3 window */
-				for (int j = max(0,y-1); j < min(h,y+1); j++)
-					for (int i = max(0,x-1); i < min(w,x+1); i++)
+				for (int j = -1; j < 2; j++)
+					for (int i = -1; i < 2; i++)
 						/* If the value of the pixel is less then the x,y pixel, set it to zero */
-						if (srcImage.Pixel(x+i,y+j,1) < temp)
-							destImage.Pixel(x,y,1) = 0;
+						if ( x+i >= 0 && x+i < w && y+j >= 0 && y+j <h 
+							&& (j != 0 && i!= 0) ) 
+							if (srcImage.Pixel(x+i,y+j,0) < temp)
+								destImage.Pixel(x+1,y+j,0) = 0;
+							
+
 			}
-			
-            
         }
     }
 }
@@ -407,17 +411,17 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 			for (int k = -20; k < 21; k++){
 				/* Check if in the boundaries of the image */
 				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
-					splot.Pixel(k+20, j+20,1) = grayImage.Pixel(f.x + k,f.y+j,1);
+					splot.Pixel(k+20, j+20,0) = grayImage.Pixel(f.x + k,f.y+j,0);
 				}
 			}
 		}
 
 		// For each position calculate direction from ration of gradient at feature position
 		// Can be done better
-		f.angleRadians = atan(ky.Pixel(f.x,f.y,1)/kx.Pixel(f.x,f.y,1));
+		f.angleRadians = atan(ky.Pixel(f.x,f.y,0)/kx.Pixel(f.x,f.y,0));
 		
 		// Rotate it
-		WarpGlobal(splot,splot, CTransform3x3.Rotation(f.angleRadians), eWarpInterpLinear);
+		//WarpGlobal(splot,splot, CTransform3x3.Rotation(f.angleRadians), eWarpInterpLinear);
 
 		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
 		CFloatImage splot5(5,5,1);
