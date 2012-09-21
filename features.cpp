@@ -319,7 +319,6 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 	Convolve(CFloatImage(h_a),h_a, averageK);
 	Convolve(CFloatImage(h_b),h_b, averageK);
 	Convolve(CFloatImage(h_c),h_c, averageK);
-
     
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {            
@@ -379,54 +378,64 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
     }
 }
 
-
-// Compute Simple descriptors.
-void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
+// Compute MOPs descriptors.
+void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 {
     //Create grayscale image used for Harris detection
     CFloatImage grayImage=ConvertToGray(image);
+
+	int w = image.Shape().width;
+	int h = image.Shape().height;
+
+	//TO DO---------------------------------------------------------------------
+    CFloatImage kx(grayImage.Shape());
+	CFloatImage ky(grayImage.Shape());
+
+	/* Calculate derivatives to be used for estimating direction */
+	Convolve(grayImage, kx, ConvolveKernel_SobelX);
+	Convolve(grayImage, ky, ConvolveKernel_SobelY);
 
     vector<Feature>::iterator i = features.begin();
     while (i != features.end()) {
         Feature &f = *i;
 
-		int w = image.Shape().width;
-		int h = image.Shape().height;
-
-		//TO DO---------------------------------------------------------------------
-        // For each position calculate eigenvectors of H matrix to extact direction
-		//TODO
-		
-		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
-		//TODO
-
 		// extract 41x41 pixels around feature.
-		//TODO
-		for (int j = 0; j < 5; j++){
-			for (int k = 0; k < 5; k++){
+		CFloatImage splot(41,41,1);
+		for (int j = -20; j < 21; j++){
+			for (int k = -20; k < 21; k++){
 				/* Check if in the boundaries of the image */
 				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
-						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,1));
-				} else {
-						/* If out of bundary put 0 */
-						f.data.push_back(0);
-					}
+					splot.Pixel(k+20, j+20,1) = grayImage.Pixel(f.x + k,f.y+j,1);
 				}
 			}
-		// Rotate it
-		//TODO
+		}
 
-		// subsample to a 5x5 patch
-		//TODO
+		// For each position calculate direction from ration of gradient at feature position
+		// Can be done better
+		f.angleRadians = atan(kx.Pixel(f.x,f.y,1));
+		
+		// Rotate it
+		WarpGlobal(splot,splot, CTransform3x3.Rotation(f.angleRadians), eWarpInterpLinear);
+
+		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
+		CFloatImage splot5(5,5,1);
+		
+		// subsample to a 5x5 patch (3rd octave)
+		ConvolveSeparable(splot,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 3);
 
 		// Add it to the feature.data
-		//TODO
+		// Loop around the 5x5 pixels
+		for (int j = 0; j < 5; j++){
+			for (int k = 0; k < 5; k++){
+				f.data.push_back(grayImage.Pixel(k,j,1));
+			}
+		}
         i++;
     }
 }
 
-// Compute MOPs descriptors.
-void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
+// Compute Simple descriptors.
+void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 {
 	//Create grayscale image used for Harris detection
     CFloatImage grayImage=ConvertToGray(image);
@@ -441,8 +450,8 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		int h = image.Shape().height;
 
 		// Loop around the 5x5 pixels
-		for (int j = 0; j < 5; j++){
-			for (int k = 0; k < 5; k++){
+		for (int j = -2; j < 3; j++){
+			for (int k = -2; k < 3; k++){
 				/* Check if in the boundaries of the image */
 				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
 						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,1));
