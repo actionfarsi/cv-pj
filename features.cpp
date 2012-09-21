@@ -248,7 +248,6 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
     computeLocalMaxima(harrisImage,harrisMaxImage);
 
     // Prints out the harris image for debugging purposes
-   
     convertToByteImage(harrisImage, tmp);
     WriteFile(tmp, "harris.tga");
     
@@ -347,7 +346,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 0.6;
+	float threshold = 0.4;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
@@ -366,16 +365,16 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 	// find local maxima
 	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
+			float temp = srcImage.Pixel(x,y,0);
 			/* if the pixel x,y is above threshold, remove pixels around it */
-			if (destImage.Pixel(x,y,0) != 0) {
-				float temp = srcImage.Pixel(x,y,0);
+			if (temp >= threshold) {
 				/* loop between a 3x3 window */
 				for (int j = -1; j < 2; j++)
 					for (int i = -1; i < 2; i++)
 						/* If the value of the pixel is less then the x,y pixel, set it to zero */
 						if ( x+i >= 0 && x+i < w && y+j >= 0 && y+j <h 
 							&& (j != 0 && i!= 0) ) 
-							if (srcImage.Pixel(x+i,y+j,0) < temp)
+							if (srcImage.Pixel(x+i,y+j,0) <= temp)
 								destImage.Pixel(x+1,y+j,0) = 0;
 							
 
@@ -421,7 +420,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		f.angleRadians = atan(ky.Pixel(f.x,f.y,0)/kx.Pixel(f.x,f.y,0));
 		
 		// Rotate it
-		//WarpGlobal(splot,splot, CTransform3x3.Rotation(f.angleRadians), eWarpInterpLinear);
+		WarpGlobal(splot,splot, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
 
 		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
 		CFloatImage splot5(5,5,1);
@@ -460,7 +459,7 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 			for (int k = -2; k < 3; k++){
 				/* Check if in the boundaries of the image */
 				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
-						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,1));
+						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,0));
 				} else {
 						/* If out of bundary put 0 */
 						f.data.push_back(0);
