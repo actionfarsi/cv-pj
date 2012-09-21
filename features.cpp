@@ -412,7 +412,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 
 		// For each position calculate direction from ration of gradient at feature position
 		// Can be done better
-		f.angleRadians = atan(kx.Pixel(f.x,f.y,1));
+		f.angleRadians = atan(ky.Pixel(f.x,f.y,1)/kx.Pixel(f.x,f.y,1));
 		
 		// Rotate it
 		WarpGlobal(splot,splot, CTransform3x3.Rotation(f.angleRadians), eWarpInterpLinear);
@@ -421,7 +421,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		CFloatImage splot5(5,5,1);
 		
 		// subsample to a 5x5 patch (3rd octave)
-		ConvolveSeparable(splot,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 3);
+		ConvolveSeparable(splot,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 4);
 
 		// Add it to the feature.data
 		// Loop around the 5x5 pixels
