@@ -32,6 +32,7 @@ bool computeFeatures(CFloatImage &image, FeatureSet &features, int featureType, 
     switch (descriptorType) {
     case 1:
         ComputeSimpleDescriptors(image, features);
+		//line
         break;
     case 2:
         ComputeMOPSDescriptors(image, features);
@@ -233,19 +234,20 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
 
     //Create image to store Harris values
     CFloatImage harrisImage(image.Shape().width,image.Shape().height,1);
-
+	
     //Create image to store local maximum harris values as 1, other pixels 0
     CByteImage harrisMaxImage(image.Shape().width,image.Shape().height,1);
+
+	CByteImage tmp(harrisImage.Shape());
 
     //compute Harris values puts harris values at each pixel position in harrisImage. 
     //You'll need to implement this function.
     computeHarrisValues(grayImage, harrisImage);
-        
+
     // Threshold the harris image and compute local maxima.  You'll need to implement this function.
     computeLocalMaxima(harrisImage,harrisMaxImage);
 
     // Prints out the harris image for debugging purposes
-    CByteImage tmp(harrisImage.Shape());
     convertToByteImage(harrisImage, tmp);
     WriteFile(tmp, "harris.tga");
     
@@ -254,19 +256,28 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
     //Loop through feature points in harrisMaxImage and fill in information needed for 
     //descriptor computation for each point above a threshold. We fill in id, type, 
     //x, y, and angle.
+	int id = 1;
+
     for (int y=0;y<harrisMaxImage.Shape().height;y++) {
         for (int x=0;x<harrisMaxImage.Shape().width;x++) {
                 
             // Skip over non-maxima
-            if (harrisMaxImage.Pixel(x, y, 0) == 0)
-		continue;
+            if (harrisMaxImage.Pixel(x, y, 0) != 0){
+				
 
             //TO DO---------------------------------------------------------------------
             // Fill in feature with descriptor data here. 
             Feature f;
 
+			f.x = x;
+			f.y = y;
+			f.angleRadians = 0;
+			f.id = id;
+			id++;
+
             // Add the feature to the list of features
             features.push_back(f);
+			}
         }
     }
 }
@@ -282,14 +293,48 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
     int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
 
-    for (int y = 0; y < h; y++) {
+	CFloatImage kx(harrisImage.Shape());
+	CFloatImage ky(harrisImage.Shape());
+
+	/* Calculate derivatives */
+	Convolve(srcImage,kx,ConvolveKernel_SobelX);
+	Convolve(srcImage,ky,ConvolveKernel_SobelY);
+
+	/* Calculate the 3 elements */
+	CFloatImage h_a(harrisImage.Shape());
+	CFloatImage h_b(harrisImage.Shape());
+	CFloatImage h_c(harrisImage.Shape());
+	
+	for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-            
+			h_a.Pixel(x,y,0) = kx.Pixel(x,y,0) * kx.Pixel(x,y,0);
+			h_b.Pixel(x,y,0) = kx.Pixel(x,y,0) * ky.Pixel(x,y,0);
+			h_c.Pixel(x,y,0) = ky.Pixel(x,y,0) * ky.Pixel(x,y,0);
+		}
+	}
+
+	/* Calculate elements Harris matrix.
+	Average sum is equivalent to filtering */
+	CShape sh(5, 5, 1);
+	CFloatImage averageK(sh);
+	for (int i = 0; i < 25; i++)
+		averageK.Pixel((i-i%5)/5, i%5, 0) = gaussian5x5[i];
+
+	Convolve(h_a,h_a, averageK);
+	Convolve(h_b,h_b, averageK);
+	Convolve(h_c,h_c, averageK);
+    
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {            
             // TODO:  Compute the harris score for 'srcImage' at this pixel and store in 'harrisImage'.  See the project
             //   page for pointers on how to do this
+			harrisImage.Pixel(x,y,0) = (h_a.Pixel(x,y,0) * h_c.Pixel(x,y,0) - h_b.Pixel(x,y,0)*h_b.Pixel(x,y,0) ) /
+											(h_a.Pixel(x,y,0) + h_c.Pixel(x,y,0))*2;
             
         }
     }
+
+	// De-allocate memory????
 }
 
 
@@ -301,14 +346,115 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 //    You'll need to find a good threshold to use.
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
-        
+	// Choose threshold
+	float threshold = 0.17;
+
+	int w = srcImage.Shape().width;
+    int h = srcImage.Shape().height;
+
+	// Threshold loop
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+			if (srcImage.Pixel(x,y,0) >= threshold){
+				destImage.Pixel(x,y,0) = 1;
+			} else {
+				destImage.Pixel(x,y,0) = 0;
+			}
+		}
+	}
+	
+	// find local maxima
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+			float temp = srcImage.Pixel(x,y,0);
+			/* if the pixel x,y is above threshold, remove pixels around it */
+			if (temp >= threshold) {
+				/* loop between a 3x3 window */
+				for (int j = -1; j < 2; j++)
+					for (int i = -1; i < 2; i++)
+						/* If the value of the pixel is less then the x,y pixel, set it to zero */
+						if ( x+i >= 0 && x+i < w && y+j >= 0 && y+j <h 
+							&& (j != 0 && i!= 0) ) 
+							if (srcImage.Pixel(x+i,y+j,0) <= temp)
+								destImage.Pixel(x+1,y+j,0)  = 0;
+							
+
+			}
+        }
+    }
 }
 
+// Compute MOPs descriptors.
+void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
+{
+    //Create grayscale image used for Harris detection
+    CFloatImage grayImage=ConvertToGray(image);
+
+	int w = image.Shape().width;
+	int h = image.Shape().height;
+
+	//TO DO---------------------------------------------------------------------
+    CFloatImage kx(grayImage.Shape());
+	CFloatImage ky(grayImage.Shape());
+
+	/* Calculate derivatives to be used for estimating direction */
+	Convolve(grayImage, kx, ConvolveKernel_SobelX);
+	Convolve(grayImage, ky, ConvolveKernel_SobelY);
+
+    vector<Feature>::iterator i = features.begin();
+    while (i != features.end()) {
+        Feature &f = *i;
+
+		// extract 41x41 pixels around feature.
+		CFloatImage splot(41,41,1);
+		for (int j = -20; j < 21; j++){
+			for (int k = -20; k < 21; k++){
+				/* Check if in the boundaries of the image */
+				if (f.x+k >= 0 && f.x+k<w && f.y+j>=0 && f.y+j<h){
+					splot.Pixel(k+20, j+20,0) = grayImage.Pixel(f.x + k, f.y+j,0);
+				}
+			}
+		}
+
+		// For each position calculate direction from ration of gradient at feature position
+		// Can be done better
+		f.angleRadians = atan(ky.Pixel(f.x,f.y,0) / kx.Pixel(f.x,f.y,0));
+		
+		// Rotate it
+		CFloatImage splot2(41,41,1);
+		WarpGlobal(splot,splot2, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
+
+		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
+		CFloatImage splot5(5,5,1);
+		
+		//CByteImage tmp(splot.Shape());
+		//convertToByteImage(splot, tmp);
+		//WriteFile(tmp, "harris1.tga");
+
+		// subsample to a 5x5 patch (3rd octave)
+		ConvolveSeparable(splot2,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 5);
+
+		//CByteImage tmp2(splot5.Shape());
+		//convertToByteImage(splot5, tmp2);
+		//WriteFile(tmp2, "harris3.tga");
+
+		// Add it to the feature.data
+		// Loop around the 5x5 pixels
+		for (int j = 0; j < 8; j++){
+			for (int k = 0; k < 8; k++){
+				if (_isnan(splot5.Pixel(k,j,0)))
+					splot5.Pixel(k,j,0) = 0;
+				f.data.push_back(splot5.Pixel(k,j,0));
+			}
+		}
+        i++;
+    }
+}
 
 // Compute Simple descriptors.
 void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 {
-    //Create grayscale image used for Harris detection
+	//Create grayscale image used for Harris detection
     CFloatImage grayImage=ConvertToGray(image);
 
     vector<Feature>::iterator i = features.begin();
@@ -317,15 +463,23 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 
         //TO DO---------------------------------------------------------------------
         // The descriptor is a 5x5 window of intensities sampled centered on the feature point.
+		int w = image.Shape().width;
+		int h = image.Shape().height;
 
+		// Loop around the 5x5 pixels
+		for (int j = -2; j < 3; j++){
+			for (int k = -2; k < 3; k++){
+				/* Check if in the boundaries of the image */
+				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
+						f.data.push_back(grayImage.Pixel(f.x + k,f.y+j,0));
+				} else {
+						/* If out of bundary put 0 */
+						f.data.push_back(0);
+					}
+				}
+			}
         i++;
     }
-}
-
-// Compute MOPs descriptors.
-void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
-{
-
 }
 
 // Compute Custom descriptors (extra credit)
