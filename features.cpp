@@ -329,7 +329,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
             // TODO:  Compute the harris score for 'srcImage' at this pixel and store in 'harrisImage'.  See the project
             //   page for pointers on how to do this
 			harrisImage.Pixel(x,y,0) = (h_a.Pixel(x,y,0) * h_c.Pixel(x,y,0) - h_b.Pixel(x,y,0)*h_b.Pixel(x,y,0) ) /
-											(h_a.Pixel(x,y,0) + h_c.Pixel(x,y,0));
+											(h_a.Pixel(x,y,0) + h_c.Pixel(x,y,0))*2;
             
         }
     }
@@ -347,7 +347,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 0.2;
+	float threshold = 0.17;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
@@ -432,7 +432,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		//WriteFile(tmp, "harris1.tga");
 
 		// subsample to a 5x5 patch (3rd octave)
-		ConvolveSeparable(splot2,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 9);
+		ConvolveSeparable(splot2,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 5);
 
 		//CByteImage tmp2(splot5.Shape());
 		//convertToByteImage(splot5, tmp2);
@@ -440,8 +440,8 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 
 		// Add it to the feature.data
 		// Loop around the 5x5 pixels
-		for (int j = 0; j < 5; j++){
-			for (int k = 0; k < 5; k++){
+		for (int j = 0; j < 8; j++){
+			for (int k = 0; k < 8; k++){
 				if (_isnan(splot5.Pixel(k,j,0)))
 					splot5.Pixel(k,j,0) = 0;
 				f.data.push_back(splot5.Pixel(k,j,0));
