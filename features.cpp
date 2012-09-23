@@ -262,8 +262,8 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
         for (int x=0;x<harrisMaxImage.Shape().width;x++) {
                 
             // Skip over non-maxima
-            if (harrisMaxImage.Pixel(x, y, 0) == 0)
-				continue;
+            if (harrisMaxImage.Pixel(x, y, 0) != 0){
+				
 
             //TO DO---------------------------------------------------------------------
             // Fill in feature with descriptor data here. 
@@ -277,6 +277,7 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
 
             // Add the feature to the list of features
             features.push_back(f);
+			}
         }
     }
 }
@@ -346,7 +347,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 0.4;
+	float threshold = 0.2;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
@@ -375,7 +376,7 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 						if ( x+i >= 0 && x+i < w && y+j >= 0 && y+j <h 
 							&& (j != 0 && i!= 0) ) 
 							if (srcImage.Pixel(x+i,y+j,0) <= temp)
-								destImage.Pixel(x+1,y+j,0) = 0;
+								destImage.Pixel(x+1,y+j,0)  = 0;
 							
 
 			}
@@ -409,30 +410,41 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		for (int j = -20; j < 21; j++){
 			for (int k = -20; k < 21; k++){
 				/* Check if in the boundaries of the image */
-				if (f.x+k >= 0 && f.x+k <w && f.y+j>=0 && f.y+j<h){
-					splot.Pixel(k+20, j+20,0) = grayImage.Pixel(f.x + k,f.y+j,0);
+				if (f.x+k >= 0 && f.x+k<w && f.y+j>=0 && f.y+j<h){
+					splot.Pixel(k+20, j+20,0) = grayImage.Pixel(f.x + k, f.y+j,0);
 				}
 			}
 		}
 
 		// For each position calculate direction from ration of gradient at feature position
 		// Can be done better
-		f.angleRadians = atan(ky.Pixel(f.x,f.y,0)/kx.Pixel(f.x,f.y,0));
+		f.angleRadians = atan(ky.Pixel(f.x,f.y,0) / kx.Pixel(f.x,f.y,0));
 		
 		// Rotate it
-		WarpGlobal(splot,splot, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
+		CFloatImage splot2(41,41,1);
+		WarpGlobal(splot,splot2, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
 
 		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
 		CFloatImage splot5(5,5,1);
 		
+		//CByteImage tmp(splot.Shape());
+		//convertToByteImage(splot, tmp);
+		//WriteFile(tmp, "harris1.tga");
+
 		// subsample to a 5x5 patch (3rd octave)
-		ConvolveSeparable(splot,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 4);
+		ConvolveSeparable(splot2,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 9);
+
+		//CByteImage tmp2(splot5.Shape());
+		//convertToByteImage(splot5, tmp2);
+		//WriteFile(tmp2, "harris3.tga");
 
 		// Add it to the feature.data
 		// Loop around the 5x5 pixels
 		for (int j = 0; j < 5; j++){
 			for (int k = 0; k < 5; k++){
-				f.data.push_back(grayImage.Pixel(k,j,1));
+				if (_isnan(splot5.Pixel(k,j,0)))
+					splot5.Pixel(k,j,0) = 0;
+				f.data.push_back(splot5.Pixel(k,j,0));
 			}
 		}
         i++;
