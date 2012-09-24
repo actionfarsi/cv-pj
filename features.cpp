@@ -347,7 +347,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 0.2;
+	double threshold = 0.2;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
@@ -425,26 +425,41 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		WarpGlobal(splot,splot2, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
 
 		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
-		CFloatImage splot5(5,5,1);
+		CFloatImage splot5(8,8,1);
 		
-		//CByteImage tmp(splot.Shape());
-		//convertToByteImage(splot, tmp);
-		//WriteFile(tmp, "harris1.tga");
+		CByteImage tmp(splot.Shape());
+		convertToByteImage(splot, tmp);
+		WriteFile(tmp, "harris1.tga");
 
-		// subsample to a 5x5 patch (3rd octave)
-		ConvolveSeparable(splot2,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 9);
+		// subsample to a 8x8 patch (3rd octave)
+		ConvolveSeparable(splot2,splot5, ConvolveKernel_14641, ConvolveKernel_14641, 5);
 
-		//CByteImage tmp2(splot5.Shape());
-		//convertToByteImage(splot5, tmp2);
-		//WriteFile(tmp2, "harris3.tga");
+		CByteImage tmp2(splot5.Shape());
+		convertToByteImage(splot5, tmp2);
+		WriteFile(tmp2, "harris3.tga");
 
-		// Add it to the feature.data
-		// Loop around the 5x5 pixels
-		for (int j = 0; j < 5; j++){
-			for (int k = 0; k < 5; k++){
+		// Calculate mean and sd
+		double sum = 0;
+		double sum2 = 0;
+
+		// Loop around the 8x8 pixels
+		for (int j = 0; j < 8; j++){
+			for (int k = 0; k < 8; k++){
 				if (_isnan(splot5.Pixel(k,j,0)))
 					splot5.Pixel(k,j,0) = 0;
-				f.data.push_back(splot5.Pixel(k,j,0));
+				sum += splot5.Pixel(k,j,0);
+				sum2 += pow(splot5.Pixel(k,j,0),2);
+			}
+		}
+
+		double mean = sum / 64;
+		double std = (sum2 - pow(sum,2)/64)/(63);
+
+		// Add it to the feature.data
+		// Loop around the 8x8 pixels
+		for (int j = 0; j < 8; j++){
+			for (int k = 0; k < 8; k++){
+				f.data.push_back((splot5.Pixel(k,j,0)-mean)/std);
 			}
 		}
         i++;
