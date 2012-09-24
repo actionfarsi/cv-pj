@@ -540,46 +540,55 @@ void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Featu
     matches.resize(m);
     totalScore = 0;
 
-    double d;
-    double dBest;
+    double d,second_best;
+    double dBest,dBest_ratio, dCurr_ratio;
     int idBest;
-    for (int i=0; i<m; i++) {
-    	matches[i].id1=0;
-    	matches[i].id2=0;
-    	matches[i].second=0;
-    	matches[i].score=0;
-    }
+  
     for (int i=0; i<m; i++) {
         dBest = 1e100;
         idBest = 0;
-        double second_best=0;
+        second_best=0;
+		int first_time=0;
         for (int j=0; j<n; j++) {
             d = distanceSSD(f1[i].data, f2[j].data);
-
-            if (d < dBest) {
-            	//makes the last best value the 2nd best
-            	second_best=dBest;
-            	dBest = d;
-            	idBest = f2[j].id;
-
-            }
+			if(first_time!=0){
+		
+					//this is the second time so now we can decide the second_best
+					if(d<dBest){
+					second_best=dBest;
+					dBest=d;
+					idBest = f2[j].id;
+					}else{
+						if(second_best==0){
+							second_best=d;
+						}
+					}
+					
+				
+		
+			}else{
+			first_time=1;
+			dBest=d;
+			idBest = f2[j].id;
+			}
+			
         }
-
+		
         matches[i].id1 = f1[i].id;
         matches[i].id2 = idBest;
         //moves past best score into 2nd place
-
-		matches[i].second=second_best;
-        matches[i].score = dBest;
-       //totalScore += matches[i].score;
+		dBest_ratio=dBest/second_best;
+	    // printf("%f\n",dBest_ratio);
+        matches[i].score = dBest_ratio;
+       totalScore += matches[i].score;
 
     }
 
-    for (int i=0; i<m; i++) {
+  /*  for (int i=0; i<m; i++) {
     totalScore += matches[i].score/matches[i].second;
     printf("score:%f\n",totalScore);
 
-    }
+    }*/
 
 }
 
