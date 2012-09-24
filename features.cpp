@@ -91,7 +91,7 @@ bool matchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMat
         ssdMatchFeatures(f1, f2, matches, totalScore);
         return true;
     case 2:
-		printf("\nration");
+		printf("\nratio");
         ratioMatchFeatures(f1, f2, matches, totalScore);
         return true;
     default:
@@ -519,7 +519,7 @@ void ssdMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Feature
 
         matches[i].id1 = f1[i].id;
         matches[i].id2 = idBest;
-        matches[i].score = -dBest;
+        matches[i].score = dBest;
         totalScore += matches[i].score;
     }
     printf("score:%f\n",totalScore);
@@ -569,8 +569,8 @@ void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Featu
         matches[i].id2 = idBest;
         //moves past best score into 2nd place
 
-		matches[i].second=-second_best;
-        matches[i].score = -dBest;
+		matches[i].second=second_best;
+        matches[i].score = dBest;
        //totalScore += matches[i].score;
 
     }
