@@ -11,7 +11,7 @@ using namespace std;
 // of the match.
 struct FeatureMatch {
 	int id1, id2;
-	double score, second; //implemented by le: this lets us keep track of the 2nd best score for ratio matching
+	double score; 
 };
 
 // The Feature class stores the feature ID, location, and a vector of
