@@ -269,6 +269,7 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
             // Fill in feature with descriptor data here. 
             Feature f;
 
+			f.type = 2;
 			f.x = x;
 			f.y = y;
 			f.angleRadians = 0;
@@ -405,8 +406,8 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
     while (i != features.end()) {
         Feature &f = *i;
 
-		// extract 41x41 pixels around feature.
-		CFloatImage splot(40,40,1);
+		// extract 40x40 pixels around feature.
+		CFloatImage splot(40,40,1), splot2(40,40,1);
 		for (int j = -20; j < 20; j++){
 			for (int k = -20; k < 20; k++){
 				/* Check if in the boundaries of the image */
@@ -415,14 +416,15 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 				}
 			}
 		}
+		// Scale
+		ConvolveSeparable(splot,splot2, ConvolveKernel_14641, ConvolveKernel_14641,1);
 
 		// For each position calculate direction from ration of gradient at feature position
 		// Can be done better
 		f.angleRadians = atan(ky.Pixel(f.x,f.y,0) / kx.Pixel(f.x,f.y,0));
 		
 		// Rotate it
-		CFloatImage splot2(40,40,1);
-		WarpGlobal(splot,splot2, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
+		WarpGlobal(splot2,splot, CTransform3x3::Rotation(f.angleRadians), eWarpInterpLinear);
 
 		// The descriptor is a 5x5 window of intensities sampled centered on the feature point.
 		CFloatImage splot5(8,8,1);
@@ -447,14 +449,15 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		// Loop around the 8x8 pixels
 		for (int j = 0; j < 8; j++){
 			for (int k = 0; k < 8; k++){
-				if (_isnan(splot5.Pixel(k,j,0)))
-					splot5.Pixel(k,j,0) = 0;
+				if (_isnan(splot5.Pixel(k,j,0))) {
+					//splot5.Pixel(k,j,0) = 0;
+					continue;
+				}
+				//if (splot5.Pixel(k,j,0) >= 1)
+				//	splot5.Pixel(k,j,0) = 0;
 
-				if (splot5.Pixel(k,j,0) >= 1)
-					splot5.Pixel(k,j,0) = 0;
-
-				if (splot5.Pixel(k,j,0) < 0)
-					splot5.Pixel(k,j,0) = 0;
+				//if (splot5.Pixel(k,j,0) < 0)
+				//	splot5.Pixel(k,j,0) = 0;
 
 				sum += splot5.Pixel(k,j,0);
 				sum2 += splot5.Pixel(k,j,0) * splot5.Pixel(k,j,0);
@@ -470,9 +473,10 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		for (int j = 0; j < 8; j++){
 			for (int k = 0; k < 8; k++){
 				if (_isnan(splot5.Pixel(k,j,0))){
-					splot5.Pixel(k,j,0) = 0;
+					f.data.push_back(0);
+				} else {
+					f.data.push_back((splot5.Pixel(k,j,0)-mean)/std);
 				}
-				f.data.push_back((splot5.Pixel(k,j,0)-mean)/std);
 			}
 		}
         i++;
