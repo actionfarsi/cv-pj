@@ -250,6 +250,7 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
     // Prints out the harris image for debugging purposes
     convertToByteImage(harrisImage, tmp);
     WriteFile(tmp, "harris.tga");
+	WriteFile(harrisMaxImage, "maxharris.tga");
     
 
     // TO DO--------------------------------------------------------------------
@@ -348,10 +349,22 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage)
 void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 {
 	// Choose threshold
-	float threshold = 0.2;
+	float threshold = 0.3;
 
 	int w = srcImage.Shape().width;
     int h = srcImage.Shape().height;
+
+	// find max value
+	float maxValue = 0;
+	for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+			if (srcImage.Pixel(x,y,0) >= maxValue)
+				maxValue = srcImage.Pixel(x,y,0);
+				
+		}
+	}
+
+	threshold = threshold * maxValue;
 
 	// Threshold loop
 	for (int y = 0; y < h; y++) {
@@ -369,17 +382,19 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
         for (int x = 0; x < w; x++) {
 			float temp = srcImage.Pixel(x,y,0);
 			/* if the pixel x,y is above threshold, remove pixels around it */
-			if (temp >= threshold) {
+			if (srcImage.Pixel(x,y,0) != 0) {
 				/* loop between a 3x3 window */
-				for (int j = -1; j < 2; j++)
-					for (int i = -1; i < 2; i++)
+				for (int j = -1; j < 2; j++){
+					for (int i = -1; i < 2; i++){
 						/* If the value of the pixel is less then the x,y pixel, set it to zero */
-						if ( x+i >= 0 && x+i < w && y+j >= 0 && y+j <h 
-							&& (j != 0 && i!= 0) ) 
-							if (srcImage.Pixel(x+i,y+j,0) <= temp)
-								destImage.Pixel(x+1,y+j,0)  = 0;
-							
-
+						if (    (x+i >= 0) && (x+i < w)
+							&&  (y+j >= 0) && (y+j < h)
+							&& !(j == 0 && i== 0) ){
+								if (srcImage.Pixel(x+i,y+j,0) < temp)
+									destImage.Pixel(x+i, y+j,0) = 0;
+							 }
+					}
+				}
 			}
         }
     }
