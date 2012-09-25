@@ -465,7 +465,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		}
 
 		double mean = sum / 64;
-		double std = (sum2 - pow(sum,2)/64)/(63);
+		double std = sqrt(sum2/63 - pow(sum/64,2));
 		//printf("%f %f\n",mean,std);
 
 		// Add it to the feature.data
